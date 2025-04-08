@@ -1,0 +1,108 @@
+server:
+  port: 12345
+
+spring:
+  application:
+    name: datalinkx-server
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: 123456
+    url: jdbc:mysql://192.168.48.131:3306/datalinkx?characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai&zeroDateTimeBehavior=convertToNull
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    deserialization:
+      fail-on-unknown-properties: false
+  aop:
+    proxy-target-class: true
+  jpa:
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+  redis:
+    database: 0       # Redis数据库索引（默认为0）,如果设置为1，那么存入的key-value都存放在select 1中
+    host: 192.168.48.131
+    port: 6379
+    password: 123456
+    timeout: 10000
+#  elasticsearch:  # 开启大模型时打开注解
+#    rest:
+#      uris:
+
+xxl-job:
+  username: admin
+  password: 123456
+  job-group: 2
+  exec-handler: dataTransJobHandler
+  executor-route-strategy: FIRST
+  client:
+    url: http://localhost:8080
+    connect_timeout_ms: 20000
+    call_timeout_ms: 600000
+    read_timeout_ms: 600000
+    logging: true
+
+# 流转配置性能
+data-transfer:
+  # 批次提交行数，读fetch-size行后提交
+  fetch-size: 1000
+  # 流式任务提交阈值，读stream-batch-size行后提交
+  stream-batch-size: 10
+  # 读fetch-size行数据的查询超时时间
+  query-time-out: 10000
+  # 流式checkpoint地址
+  checkpoint-path: file:///tmp
+  # 触发checkpoint时间间隔
+  checkpoint-interval: 6000
+  # kafka读取规则
+  kafka-read-mode: group-offsets
+
+
+client:
+  datajob:
+    url: http://localhost:23456
+    connect_timeout_ms: 20000
+    call_timeout_ms: 600000
+    read_timeout_ms: 600000
+    logging: true
+  flink:
+    url: http://localhost:8081
+    connect_timeout_ms: 20000
+    call_timeout_ms: 600000
+    read_timeout_ms: 600000
+    logging: true
+  ollama:
+    url: http://localhost:11434
+
+logging:
+  pattern:
+    console: ${CONSOLE_LOG_PATTERN:%clr(%d{${LOG_DATEFORMAT_PATTERN:yyyy-MM-dd HH:mm:ss.SSS}}){faint} %clr(${LOG_LEVEL_PATTERN:%5p}) %clr(${PID:- }){magenta} [${spring.application.name}] %clr([%10.10t]){faint}[%36.36X{trace_id}] %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}}
+  file:
+    name: log/${spring.application.name}.log
+  level:
+    com.datalinkx: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.hql: INFO
+
+topic:
+  daemon: true #消息队列白名单刷新开关，必须为true，false会影响消息队列使用
+
+retrofit:
+  # 日志打印配置
+  log:
+    # 启用日志打印
+    enable: true
+    # 日志打印拦截器
+    logging-interceptor: com.github.lianjiatech.retrofit.spring.boot.interceptor.DefaultLoggingInterceptor
+    # 全局日志打印级别
+    global-log-level: info
+    # 全局日志打印策略
+    global-log-strategy: body
+
+llm:
+#  embedding: "shaw/dmeta-embedding-zh"
+  model: "qwen:7b"
+  vector: "elasticsearch"
+  response_parse: "$.message.content"
+  inner_prompt: "不要回答任何多余的说辞和思考过程!只回答我问题的答案，不要长篇大论一句话，越简洁越好"
