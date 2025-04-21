@@ -36,22 +36,34 @@ public class RequestLogFilter implements Filter {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         HttpServletResponse response = (HttpServletResponse) servletResponse;
 
+        /**
+         *  Mapped Diagnostic Context (MDC) 中获取 TRACE_ID。TRACE_ID 是一个用于追踪请求的唯一标识符
+         *  如果 MDC 中没有 TRACE_ID，则尝试从请求头或请求参数中获取
+         */
+
         String traceId = MDC.get(MetaConstants.CommonConstant.TRACE_ID);
         if (!StringUtils.hasLength(traceId)) {
+            //getCommonVariable 方法会先从请求头中获取，如果不存在，则从请求参数中获取
             traceId = getCommonVariable(request, MetaConstants.CommonConstant.TRACE_ID);
             if (!StringUtils.hasLength(traceId)) {
-                traceId = UUID.randomUUID().toString();
+                traceId = UUID.randomUUID().toString();//如果仍然没有获取到 TRACE_ID，则生成一个新的 UUID 作为 TRACE_ID
             }
         }
         MDC.put(MetaConstants.CommonConstant.TRACE_ID, traceId);
 
+        //将请求开始时间和 TRACE_ID 放入请求属性中，以便在后续处理中使用
         request.setAttribute("reqStartTime", System.currentTimeMillis());
         request.setAttribute("traceId", traceId);
-        String realIp = request.getHeader("X-Real-Ip");
+        String realIp = request.getHeader("X-Real-Ip"); //从请求头中获取真实 IP 地址
 
         try {
             filterChain.doFilter(servletRequest, servletResponse);
         } finally {
+            /**
+             * 计算请求的处理时间
+             * 调用 afterRequestLog 方法记录请求的日志
+             * 清空 MDC，以避免线程池复用时的上下文污染
+             */
             long elasTime = System.currentTimeMillis() - (long) request.getAttribute("reqStartTime");
             afterRequestLog(request, response, realIp, elasTime);
             MDC.clear();

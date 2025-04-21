@@ -34,7 +34,8 @@ public class MessageHubServiceImpl implements MessageHubService, ApplicationCont
 
 
     @PostConstruct
-    public void init() {
+    public void init() {//注解用于标记初始化方法，该方法会在 Bean 初始化完成后被调用
+        //将不同类型的消息处理服务（如 Redis Pub/Sub、Redis Stream、Redis Queue）注册到 messageHubServiceMap 中
         this.messageHubServiceMap.put(MessageHubConstants.REDIS_PUBSUB_TYPE, applicationContext.getBean(RedisPubSubProcessor.class));
         this.messageHubServiceMap.put(MessageHubConstants.REDIS_STREAM_TYPE, applicationContext.getBean(RedisStreamProcessor.class));
         this.messageHubServiceMap.put(MessageHubConstants.REDIS_QUEUE_TYPE, applicationContext.getBean(RedisQueueProcessor.class));
@@ -59,6 +60,7 @@ public class MessageHubServiceImpl implements MessageHubService, ApplicationCont
 
     @Override
     public void produce(ProducerAdapterForm producerAdapterForm) {
+        //根据消息类型，调用对应的 MessageHubService 实现的 produce 方法，将消息发送到相应的消息队列或主题中
         this.checkTopic(producerAdapterForm);
         this.messageHubServiceMap.get(producerAdapterForm.getType()).produce(producerAdapterForm);
     }
