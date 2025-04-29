@@ -19,12 +19,19 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public abstract class AbstractDataTransferAction<T extends DataTransJobDetail, U> {
+    //更新后端db中的任务状态为进行中，任务统计值初始化
     protected abstract void begin(T info);
+    //任务结束，累计任务统计值并更新后端db中的任务状态为成功或失败和统计任务条数
     protected abstract void end(U unit, int status, String errmsg);
+    //任务开始前，构造reader、writer信息
     protected abstract void beforeExec(U unit) throws Exception;
+    //任务执行，向flink提交任务
     protected abstract void execute(U unit) throws Exception;
+
     protected abstract boolean checkResult(U unit);
+    //任务执行后，记录增量信息，累加任务统计值
     protected abstract void afterExec(U unit, boolean success);
+
     protected abstract U convertExecUnit(T info) throws Exception;
 
     private boolean isStop() {
@@ -49,6 +56,7 @@ public abstract class AbstractDataTransferAction<T extends DataTransJobDetail, U
         return toStop;
     }
 
+    //doaction方法将上面的6个钩子方法（datalinkx任务的完整生命周期串起来）
     public void doAction(T actionInfo) throws Exception {
         Thread taskCheckerThread;
         // T -> U 获取引擎执行类对象
@@ -57,6 +65,7 @@ public abstract class AbstractDataTransferAction<T extends DataTransJobDetail, U
             StringBuffer error = new StringBuffer();
             // 1、准备执行job
             this.begin(actionInfo);
+            //从 DataTransferAction.COUNT_RES 中获取任务统计值的存储容器
             Map<String, JobExecCountDto> countRes = DataTransferAction.COUNT_RES.get();
 
             String healthCheck = "patch-data-job-check-thread";
@@ -64,7 +73,11 @@ public abstract class AbstractDataTransferAction<T extends DataTransJobDetail, U
                 healthCheck = IdUtils.getHealthThreadName(actionInfo.getJobId());
             }
 
-            // 3、循环检查任务结果
+            // 3、循环检查任务结果 创建一个线程 taskCheckerThread，用于循环检查任务是否执行完成。
+            /**
+             * 如果任务完成，调用 afterExec 方法进行后置处理，并退出循环
+             * 如果任务执行过程中出现异常，记录错误信息，调用 afterExec 方法进行后置处理，并退出循环
+             */
             taskCheckerThread = new Thread(() -> {
                 DataTransferAction.COUNT_RES.set(countRes);
 
@@ -106,6 +119,7 @@ public abstract class AbstractDataTransferAction<T extends DataTransJobDetail, U
                 // 用户手动取消任务
                 throw e;
             } catch (Throwable e) {
+                //如果任务提交过程中出现异常，记录错误信息，调用 afterExec 方法进行后置处理，并更新任务状态为“失败”
                 log.error("execute task error.", e);
                 afterExec(execUnit, false);
                 error.append(e.getMessage()).append("\r\n");
@@ -114,6 +128,7 @@ public abstract class AbstractDataTransferAction<T extends DataTransJobDetail, U
             }
             // 阻塞至任务完成
             taskCheckerThread.start();
+            //join() 方法会阻塞当前线程，直到 taskCheckerThread 执行完毕（即 taskCheckerThread 的 run() 方法执行完成）
             taskCheckerThread.join();
 
             // 5、整个Job结束后的处理

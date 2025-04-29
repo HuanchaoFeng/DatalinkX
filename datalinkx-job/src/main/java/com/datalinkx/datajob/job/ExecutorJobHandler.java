@@ -25,6 +25,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 
 
+//通过生成任务配置文件、构造 Flink 命令，并通过 Java 运行时执行这些命令来提交 FlinkX 任务
+
 @Slf4j
 @Component
 public class ExecutorJobHandler {

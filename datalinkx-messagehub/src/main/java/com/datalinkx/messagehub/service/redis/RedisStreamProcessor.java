@@ -114,6 +114,7 @@ public class RedisStreamProcessor extends MessageHubServiceImpl {
                     for (ObjectRecord<String, String> record : messageList) {
                         lastOffset = record.getId().getValue();
                         //调用消费者方法，处理消息。consumerBean 是包含消费者方法的 Bean 实例，record.getValue() 是消息的内容
+                        //invokemethod是consumerconfig里面找到的带有@messageHub的方法，也就是消费者方法
                         invokeMethod.invoke(consumerBean, record.getValue());
                         //确认消息已被处理。这是 Redis Stream 的一个特性，允许消费者确认消息已被成功处理，避免重复消费
                         stringRedisTemplate.opsForStream().acknowledge(group, record);

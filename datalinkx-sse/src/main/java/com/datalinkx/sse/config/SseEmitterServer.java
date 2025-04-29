@@ -31,9 +31,15 @@ public class SseEmitterServer {
      */
     public static SseEmitter connect(String employeeCode) {
         if (!ObjectUtils.isEmpty(sseEmitterMap.get(employeeCode))) {
+            //检查是否已经存在一个与该用户ID对应的 SseEmitter 对象。如果存在，则直接返回该对象，避免重复创建
             return sseEmitterMap.get(employeeCode);
         }
-        SseEmitter sseEmitter = new SseEmitter(0L);
+        SseEmitter sseEmitter = new SseEmitter(0L);//参数 0L 表示没有超时时间限制
+        /**
+         * onCompletion：连接完成时的回调
+         * onError：发生错误时的回调
+         * onTimeout：连接超时时的回调
+         */
         // 注册回调
         sseEmitter.onCompletion(completionCallBack(employeeCode));
         sseEmitter.onError(errorCallBack(employeeCode));
@@ -51,7 +57,7 @@ public class SseEmitterServer {
      */
     public static void sendMessage(String employeeCode, String jsonMsg) {
         try {
-            SseEmitter emitter = sseEmitterMap.get(employeeCode);
+            SseEmitter emitter = sseEmitterMap.get(employeeCode);//从 sseEmitterMap 中获取与用户ID对应的 SseEmitter 对象
             if (emitter == null) {
                 emitter = connect(employeeCode);
             }
@@ -79,6 +85,7 @@ public class SseEmitterServer {
 
 
     private static Runnable completionCallBack(String employeeCode) {
+        //当连接完成时，记录日志并调用 removeUser 方法移除该用户的连接
         return () -> {
             log.info("end sse connect：{}", employeeCode);
             removeUser(employeeCode);
@@ -86,6 +93,7 @@ public class SseEmitterServer {
     }
 
     private static Runnable timeoutCallBack(String employeeCode) {
+        //当连接超时时，记录日志并调用 removeUser 方法移除该用户的连接
         return () -> {
             log.info("connect sse connect timeout：{}", employeeCode);
             removeUser(employeeCode);
@@ -93,6 +101,7 @@ public class SseEmitterServer {
     }
 
     private static Consumer<Throwable> errorCallBack(String employeeCode) {
+        //当发生错误时，记录日志并调用 removeUser 方法移除该用户的连接
         return throwable -> {
             log.info("sse connect error：{}", employeeCode);
             removeUser(employeeCode);

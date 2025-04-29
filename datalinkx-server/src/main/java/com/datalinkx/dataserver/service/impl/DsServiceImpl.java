@@ -59,6 +59,7 @@ public class DsServiceImpl implements DsService {
 
 	private static final Map<Integer, SetupInfoGenerator> SETUP_INFO_GENERATORS = new HashMap<>();
 
+	//它将数据库类型（通过 MetaConstants.DsType 枚举表示）映射到对应的 SetupInfoGenerator 实现
 	@PostConstruct
 	public void init() {
 		SETUP_INFO_GENERATORS.put(MetaConstants.DsType.MYSQL, new MysqlSetupInfoGenerator());

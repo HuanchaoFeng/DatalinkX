@@ -39,6 +39,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.PostConstruct;
 
+/**
+ * 任务由调度中心通过netty回调到DataTransHandler执行器中，执行器注入DataTransferAction这个任务触发类
+ * 由doAction开始执行一次任务的执行，而FlinkAction是继承AbstractDataTransferAction实现各种模板和钩子方法
+ */
 
 /**
  * Data Trans Job Handler
@@ -58,7 +62,7 @@ public class DataTransHandler {
     private StreamDataTransferAction streamDataTransferAction;
 
     @Autowired
-    private DatalinkXServerClient dataServerClient;
+    private DatalinkXServerClient dataServerClient;//远程调用
 
     public Map<Integer, AbstractDataTransferAction> actionEngine = new ConcurrentHashMap<>();
     @PostConstruct
@@ -71,20 +75,21 @@ public class DataTransHandler {
         }
     }
 
+    //根据任务 ID 获取任务详情
     public DataTransJobDetail getJobDetail(String jobId) {
         return dataServerClient.getJobExecInfo(jobId).getResult();
     }
 
     @SneakyThrows
     @RequestMapping("/stream_exec")
-    public String streamJobHandler(String detail) {
+    public String streamJobHandler(String detail) { //处理流式数据传输任务的方法
         DataTransJobDetail dataTransJobDetail = JsonUtils.toObject(detail, DataTransJobDetail.class);
         streamDataTransferAction.doAction(dataTransJobDetail);
         return dataTransJobDetail.getJobId();
     }
 
     @RequestMapping("/stream_health")
-    public WebResult<String> streamHealth(String jobId) {
+    public WebResult<String> streamHealth(String jobId) { //定义了一个检查流式数据传输任务健康状况的请求映射
         // 如果因为datalinkx挂掉后重启，flink任务正常，datalinkx任务状态正常，判断健康检查线程是否挂掉, 如果挂掉，先停止再重新提交
         Set<Thread> threadsSet = Thread.getAllStackTraces().keySet();
         List<Thread> healthThreads = threadsSet.stream()
@@ -99,7 +104,7 @@ public class DataTransHandler {
     }
 
     /**
-     * data trans job
+     * data trans job 任务执行器
      */
     @XxlJob("dataTransJobHandler")
     public void dataTransJobHandler() throws InterruptedException {
@@ -111,14 +116,15 @@ public class DataTransHandler {
         MDC.put("trace_id", new Date().getTime() + ":" + jobId);
 
         long startTime = new Date().getTime();
-        DataTransJobDetail jobDetail;
+        DataTransJobDetail jobDetail;//存储任务的详细信息
         try {
             jobDetail = this.getJobDetail(jobId);
+            //从 actionEngine 映射中获取与任务类型对应的执行引擎
             AbstractDataTransferAction engine = this.actionEngine.get(jobDetail.getType());
             if (ObjectUtils.isEmpty(engine)) {
                 throw new DatalinkXJobException("引擎加载失败，检查配置!");
             }
-            engine.doAction(jobDetail);
+            engine.doAction(jobDetail);//调用执行引擎的 doAction 方法执行任务
         } catch (InterruptedException e) {
             // cancel job
             throw e;
@@ -130,7 +136,7 @@ public class DataTransHandler {
         }
 
         XxlJobHelper.log("end dataTransJobHandler. ");
-        // default success
+        // default success 调用 XXL-JOB 提供的工具方法标记任务成功
         XxlJobHelper.handleSuccess("success");
     }
 

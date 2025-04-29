@@ -50,6 +50,14 @@ import org.apache.commons.lang3.StringUtils;
 public class JdbcDriver<T extends JdbcSetupInfo, P extends JdbcReader, Q extends JdbcWriter> implements
         AbstractDriver<T, P, Q>, IDsDriver, IDsReader, IDsWriter {
 
+    /**
+     * 有一个 MySQLJdbcSetupInfo 类和 OracleSQLJdbcSetupInfo 类，它们都实现了 JdbcSetupInfo 接口。
+     * 使用泛型参数 T 可以使 JdbcDriver 类同时支持这两种类型的数据库配置
+     * 在继承jdbcdriver时候，比如mysqldriver和oracledriver继承时，会指定相应的MySQLJdbcSetupInfo或者oracleJdbcSetupInfo
+     */
+
+
+    //jdbcSetupInfo（JDBC 设置信息）、connectId（连接 ID）和 PLUGIN_NAME（插件名称）
     protected T jdbcSetupInfo;
     protected String connectId;
     protected String PLUGIN_NAME = "Jdbc";
@@ -67,8 +75,16 @@ public class JdbcDriver<T extends JdbcSetupInfo, P extends JdbcReader, Q extends
         INCREMENTAL_TYPE_SET.add("bigint unsigned");
     }
 
+    /**
+     * 使用反射获取泛型参数类型，并解析连接 ID。
+     * 调用 rebuildPassword 方法重新构建密码
+     *
+     */
     public JdbcDriver(String connectId) {
+        //这行代码通过反射获取泛型参数 T 的 Class 对象
         Class clazz = (Class<T>) ((ParameterizedType) getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+        //使用 JsonUtils.toObject 方法将 connectId 解码后得到的 JSON 字符串转换为泛型类型 T 的实例
+        //将反序列化得到的对象赋值给 this.jdbcSetupInfo 成员变量
         this.jdbcSetupInfo = (T) JsonUtils.toObject(ConnectIdUtils.decodeConnectId(connectId), clazz);
         jdbcSetupInfo.setPwd(rebuildPassword(jdbcSetupInfo.getPwd()));
         this.connectId = connectId;
@@ -97,10 +113,13 @@ public class JdbcDriver<T extends JdbcSetupInfo, P extends JdbcReader, Q extends
 
     @Override
     public Object connect(boolean check) throws Exception {
+        //声明一个 Connection 类型的变量 connection，用于存储数据库连接对象
         Connection connection;
 
         String url = jdbcUrl();
         String errorMsg;
+
+        //尝试加载数据库驱动类。driverClass 方法返回驱动类的名称，Class.forName 方法加载这个类
         try {
             Class.forName(driverClass()).getDeclaredConstructor().newInstance();
         } catch (ClassNotFoundException e) {
@@ -109,8 +128,10 @@ public class JdbcDriver<T extends JdbcSetupInfo, P extends JdbcReader, Q extends
             throw new Exception(errorMsg);
         }
 
+        //使用 TelnetUtil 类的 telnet 方法检查数据库服务器的端口是否可达
         TelnetUtil.telnet(this.jdbcSetupInfo.getServer(), this.jdbcSetupInfo.getPort());
 
+        //尝试使用 DriverManager.getConnection 方法建立数据库连接
         try {
             connection = DriverManager.getConnection(url, connectProp());
         } catch (SQLException e) {
@@ -119,6 +140,7 @@ public class JdbcDriver<T extends JdbcSetupInfo, P extends JdbcReader, Q extends
             throw new Exception("数据库连接失败, 原因：" + e.getMessage());
         }
 
+        //如果 check 参数为 true，则关闭数据库连接。这可能用于测试连接是否成功建立
         if (check) {
             connection.close();
         }

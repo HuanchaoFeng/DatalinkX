@@ -44,6 +44,14 @@ public class LoginInterceptor implements Interceptor {
 		return new LoginInterceptor();
 	}
 
+	/**
+	 *
+	 * 在 OkHttp 中，拦截器可以应用于两种类型的调用：出站调用（从服务器发起到外部服务的调用）和入站调用（从外部服务发起到服务器的调用）
+	 * 下面这种是出战调用
+	 * @param chain
+	 * @return
+	 * @throws IOException
+	 */
 	@Override
 	public Response intercept(Chain chain) throws IOException {
 		Request request = chain.request();
@@ -55,10 +63,14 @@ public class LoginInterceptor implements Interceptor {
 				cookieValue = loginResp.headers().get(SET_COOKIE_HEADER);
 			}
 
-			if (StringUtils.isNotEmpty(cookieValue)) {
+			if (StringUtils.isNotEmpty(cookieValue)) {//检查是否成功获取了 Cookie 值
+				//如果获取了 Cookie，则创建一个新的请求，将 Cookie 添加到请求头中
 				Request newRequest = chain.request().newBuilder()
 						.addHeader(HEADER_COOKIE, cookieValue)
 						.build();
+				//使用新的请求继续执行链式调用，获取响应
+				//当前拦截器已经完成了对请求的处理（如果有的话），将请求传递给拦截器链中的下一个拦截器继续处理
+				// 最后一个拦截器处理请求后，不再调用 proceed，而是直接将请求发送到服务器。服务器的响应返回，按相反顺序通过拦截器链。
 				response = chain.proceed(newRequest);
 			} else {
 				log.error("xxl-job login error");

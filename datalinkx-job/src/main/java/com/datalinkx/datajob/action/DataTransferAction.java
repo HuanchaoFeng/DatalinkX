@@ -40,6 +40,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 
+/**
+ * 任务由调度中心通过netty回调到DataTransHandler执行器中，执行器注入DataTransferAction这个任务触发类
+ * 由doAction开始执行一次任务的执行，而FlinkAction是继承AbstractDataTransferAction实现各种模板和钩子方法
+ */
+
 @Slf4j
 @Component
 public class DataTransferAction extends AbstractDataTransferAction<DataTransJobDetail, FlinkActionMeta> {
@@ -60,6 +65,13 @@ public class DataTransferAction extends AbstractDataTransferAction<DataTransJobD
     @Resource(name = "messageHubServiceImpl")
     MessageHubService messageHubService;
 
+    /**
+     * 初始化任务的开始时间（START_TIME）和统计结果（COUNT_RES）。
+     * 记录日志，表示任务开始。
+     * 调用 datalinkXServerClient.updateJobStatus 方法，更新任务状态为“创建中”（JOB_STATUS_CREATE），
+     * 并将任务的开始时间、统计结果等信息同步到 DatalinkX 服务器。
+     *
+     */
 
     @Override
     protected void begin(DataTransJobDetail info) {
@@ -75,6 +87,16 @@ public class DataTransferAction extends AbstractDataTransferAction<DataTransJobD
                 .filterCount(jobExecCountDto.getFilterCount())
                 .build());
     }
+
+    /**
+     * 创建一个新的 JobExecCountDto 对象，用于汇总统计结果。
+     * 如果 COUNT_RES 不为空，遍历 COUNT_RES 中的统计结果，并将它们累加到 jobExecCountDto 中。
+     * 调用 datalinkXServerClient.updateJobStatus 方法，更新任务状态为最终状态（成功、失败或停止），并将任务的开始时间、结束时间、统计结果和错误信息同步到 DatalinkX 服务器。
+     * 如果任务状态为成功（JOB_STATUS_SUCCESS），调用 datalinkXServerClient.cascadeJob 方法，触发子任务的执行
+     * @param unit
+     * @param status
+     * @param errmsg
+     */
 
     @Override
     protected void end(FlinkActionMeta unit, int status, String errmsg) {
@@ -102,6 +124,12 @@ public class DataTransferAction extends AbstractDataTransferAction<DataTransJobD
         }
     }
 
+    /**
+     * 使用 DsDriverFactory 获取数据源驱动（IDsReader 和 IDsWriter）。
+     * 如果任务配置了覆盖数据（unit.getCover() == 1），调用 writeDsDriver.truncateData 方法清空目标表中的数据。
+     * @param unit
+     * @throws Exception
+     */
     @Override
     protected void beforeExec(FlinkActionMeta unit) throws Exception {
         log.info(String.format("jobid: %s, begin from %s to %s", unit.getJobId(), unit.getReader().getTableName(), unit.getWriter().getTableName()));
@@ -123,7 +151,16 @@ public class DataTransferAction extends AbstractDataTransferAction<DataTransJobD
         }
     }
 
-
+    /**
+     * 记录日志，表示任务正在执行。
+     * 如果任务 ID 已存在（taskId 不为空），直接返回。
+     * 使用 unit.getDsReader().getReaderInfo 和 unit.getDsWriter().getWriterInfo 获取读取器和写入器的信息。
+     * 将读取器和写入器的信息序列化为 JSON 字符串。
+     * 调用 executorJobHandler.execute 方法，将任务提交到执行器，获取任务 ID。
+     * 将任务 ID 设置到 unit 中，并调用 datalinkXServerClient.updateJobTaskRel 方法，将任务 ID 同步到 DatalinkX 服务器。
+     * @param unit
+     * @throws Exception
+     */
     @Override
     protected void execute(FlinkActionMeta unit) throws Exception {
         log.info(String.format("jobid: %s, exec from %s#%s to %s#%s",
