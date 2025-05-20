@@ -1,5 +1,4 @@
-![输入图片说明](datalinkx-server/src/main/resources/readme/project_name.png)
-## DatalinkX Stars
+## DatalinkX Stars（from other project)
 [![Stargazers over time](https://starchart.cc/SplitfireUptown/datalinkx.svg?variant=adaptive)](https://starchart.cc/SplitfireUptown/datalinkx)
 
 <a href="https://github.com/SplitfireUptown/datalinkx"><img src="https://img.shields.io/github/stars/SplitfireUptown/datalinkx.svg?style=flat&label=GithubStars"></a>
