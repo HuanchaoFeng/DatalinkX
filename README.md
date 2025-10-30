@@ -27,8 +27,6 @@
 
  **核心功能** ：在不同的异构数据源中进行数据同步，对同步任务进行管理和维护
 
- **意义**：只要公司规模较大，部门与部门之间有数据协作都应该有类似DatalinkX的项目，比如爬虫组的同事爬下来数据要定时同步到数仓组负责的库下。同步服务会集中管理同步任务，收拢同步日志、提高内部工作效率。
-
 ![输入图片说明](datalinkx-server/src/main/resources/readme/image.png)
 
 ## 项目特性
@@ -39,12 +37,6 @@
 - **高性能同步**：使用高性能流式flink计算引擎   
 - **容器化部署**：支持docker部署
 
-
-## 项目地址
-
-| 项目   | GITEE                                       | GITHUB                                          | GITCODE                                       |
-|------|---------------------------------------------|-------------------------------------------------|-----------------------------------------------|
-| 项目地址 | [GITEE](https://gitee.com/atuptown/datalinkx)  | [GITHUB](https://github.com/SplitfireUptown/datalinkx)    | [GITCODE](https://gitcode.com/m0_37817220/datalinkx) |
 
 ## 项目技术栈
 | 依赖					            | 版本					         |描述
@@ -125,24 +117,3 @@ seatunnel:
 ![img.png](datalinkx-server/src/main/resources/readme/xxl.png)
 7. 任务执行
 ![img.png](datalinkx-server/src/main/resources/readme/flink.png)
-
-## 商业版核心功能差异
-| 功能				                    | datalinkx					  | datalinkx pro
-|---------------------------|-----------------|-------
-| 支持mysql读写			              | 	✔️					        | ✔️
-| 支持oracle读写			             | ✔️					         | ✔️
-| 支持elasticsearch读写					    | ✔️					         |✔️
-| 支持http读					              | ✔️					         |✔️
-| 支持redis写					             | ✔️					           |✔️
-| 支持operator计算任务					       | ✔️					           |✔️
-| 适配flink、seatunnel多引擎					 | ✔️					           |✔️
-| 支持clickhouse读写					       | ❌					           |✔️
-| 支持mysqlcdc读写					         | ❌					           |✔️
-| 告警中心		                    | ❌			 |✔️
-| 数据源新插件定制					             | ❌				      |✔️
-| UI优化					                 | ❌				      |✔️
-| 支持定制化需求					              | ❌				      |✔️
-
-
-## 项目文档
-[细致文档带你吃透DatalinkX](https://note.youdao.com/s/a9ltzlc1)
